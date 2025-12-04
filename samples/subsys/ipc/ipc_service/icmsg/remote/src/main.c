@@ -136,13 +136,16 @@ int main(void)
 	ret = ipc_service_open_instance(ipc0_instance);
 	if ((ret < 0) && (ret != -EALREADY)) {
 		LOG_ERR("ipc_service_open_instance() failure");
-		return ret;
+		for(;;);
+		//return ret;
 	}
 
 	ret = ipc_service_register_endpoint(ipc0_instance, &ep, &ep_cfg);
+	printk("Interrupt 21 enabled: %d\n", irq_is_enabled(21));
 	if (ret < 0) {
 		LOG_ERR("ipc_service_register_endpoint() failure");
-		return ret;
+		for(;;);
+		// return ret;
 	}
 
 #if defined(CONFIG_MULTITHREADING)
@@ -155,7 +158,8 @@ int main(void)
 	ret = send_for_time(&ep, SENDING_TIME_MS);
 	if (ret < 0) {
 		LOG_ERR("send_for_time() failure");
-		return ret;
+		for(;;);
+		//return ret;
 	}
 
 	LOG_INF("Received %zu [Bytes] in total", received);

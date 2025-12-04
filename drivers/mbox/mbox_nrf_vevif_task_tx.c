@@ -40,6 +40,7 @@ static int vevif_task_tx_send(const struct device *dev, uint32_t id, const struc
 	}
 
 	nrfy_vpr_task_trigger(config->vpr, nrfy_vpr_trigger_task_get(id));
+	printk("VEVIF TX: triggered task %d on VPR %p\n", id, config->vpr);
 
 #ifdef CONFIG_SOC_NRF54H20
 	k_busy_wait(VEVIF_RETRIGGER_DELAY_USEC);

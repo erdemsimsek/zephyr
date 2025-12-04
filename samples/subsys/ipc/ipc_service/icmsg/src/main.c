@@ -161,6 +161,7 @@ int main(void)
 	}
 
 	ret = ipc_service_register_endpoint(ipc0_instance, &ep, &ep_cfg);
+	printk("Interrupt 21 enabled: %d\n", irq_is_enabled(21));
 	if (ret < 0) {
 		LOG_ERR("ipc_service_register_endpoint() failure");
 		return ret;

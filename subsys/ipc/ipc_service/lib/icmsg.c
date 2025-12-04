@@ -441,14 +441,22 @@ int icmsg_open(const struct icmsg_config_t *conf,
 		}
 	}
 
+	printk("ICMsg: old_state=%d, UNBOUND_ENABLED=%d, UNBOUND_DETECT=%d\n",
+       old_state, UNBOUND_ENABLED, UNBOUND_DETECT);
 	if (old_state == ICMSG_STATE_OFF && (UNBOUND_ENABLED || UNBOUND_DETECT)) {
 		/* Initialize mbox only if we are doing first-time open (not re-open
 		 * after unbound)
 		 */
+		printk("ICMsg: calling mbox_init\n");
 		ret = mbox_init(conf, dev_data);
+    	printk("ICMsg: mbox_init returned %d\n", ret);
 		if (ret) {
 			goto cleanup_and_exit;
 		}
+	}
+	else
+	{
+    	printk("ICMsg: SKIPPING mbox_init!\n");
 	}
 
 	/* We need to send a notification to remote, it may not be delivered

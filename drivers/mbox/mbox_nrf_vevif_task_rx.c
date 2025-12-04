@@ -21,6 +21,26 @@
 BUILD_ASSERT(VEVIF_TASKS_NUM <= VPR_TASKS_TRIGGER_MaxCount, "Number of tasks exceeds maximum");
 BUILD_ASSERT(VEVIF_TASKS_NUM == DT_NUM_IRQS(DT_DRV_INST(0)), "# IRQs != # tasks");
 
+/**
+ * @brief Convert task ID to array index based on position in tasks-mask.
+ *
+ * On chips like nRF7120 where VPR_TASKS_TRIGGER_MinIndex=0 but CLIC IRQs
+ * are only available for tasks 16-22, we cannot use (id - TASKS_IDX_MIN)
+ * as the array index. Instead, we count the number of enabled tasks
+ * (set bits in tasks-mask) below this task ID to get the correct index.
+ *
+ * Example with mask 0x007f0000 (bits 16-22):
+ *   - id=16 -> idx=0 (no set bits below bit 16)
+ *   - id=17 -> idx=1 (one set bit below: bit 16)
+ *   - id=21 -> idx=5 (five set bits below: bits 16-20)
+ */
+static inline uint8_t vevif_task_to_idx(uint32_t id)
+{
+	uint32_t mask_below = VEVIF_TASKS_MASK & ((1UL << id) - 1);
+
+	return __builtin_popcount(mask_below);
+}
+
 /* callbacks */
 struct mbox_vevif_task_rx_cbs {
 	mbox_callback_t cb[TASKS_IDX_MAX - TASKS_IDX_MIN + 1U];
@@ -40,7 +60,7 @@ static const uint8_t vevif_irqs[VEVIF_TASKS_NUM] = {
 static void vevif_task_rx_isr(const void *parameter)
 {
 	uint8_t channel = *(uint8_t *)parameter;
-	uint8_t idx = channel - TASKS_IDX_MIN;
+	uint8_t idx = vevif_task_to_idx(channel);
 
 	nrf_vpr_csr_vevif_tasks_clear(BIT(channel));
 
@@ -65,11 +85,12 @@ static int vevif_task_rx_register_callback(const struct device *dev, uint32_t id
 					   mbox_callback_t cb, void *user_data)
 {
 	ARG_UNUSED(dev);
-	uint8_t idx = id - TASKS_IDX_MIN;
 
 	if (!vevif_task_rx_is_task_valid(id)) {
 		return -EINVAL;
 	}
+
+	uint8_t idx = vevif_task_to_idx(id);
 
 	cbs.cb[idx] = cb;
 	cbs.user_data[idx] = user_data;
@@ -80,11 +101,12 @@ static int vevif_task_rx_register_callback(const struct device *dev, uint32_t id
 static int vevif_task_rx_set_enabled(const struct device *dev, uint32_t id, bool enable)
 {
 	ARG_UNUSED(dev);
-	uint8_t idx = id - TASKS_IDX_MIN;
 
 	if (!vevif_task_rx_is_task_valid(id)) {
 		return -EINVAL;
 	}
+
+	uint8_t idx = vevif_task_to_idx(id);
 
 	if (enable) {
 		if ((cbs.enabled_mask & BIT(id)) != 0U) {
