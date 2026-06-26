@@ -19,6 +19,11 @@
 #include <zephyr/sys/util.h>
 #include <zephyr/drivers/timer/system_timer.h>
 
+#if defined(CONFIG_NRF_TFM_RAM_CTRL_SERVICE)
+#include "tfm_ioctl_core_api.h"
+#include <zephyr/drivers/retained_mem/nrf_retained_mem.h>
+#endif
+
 #define NON_WAKEUP_RESET_REASON (RESET_PIN | RESET_SOFTWARE | RESET_POR | RESET_DEBUG)
 
 #if defined(CONFIG_GRTC_WAKEUP_ENABLE)
@@ -56,6 +61,23 @@ int print_reset_cause(uint32_t reset_cause)
 	return 0;
 }
 
+#if defined(CONFIG_NRF_TFM_RAM_CTRL_SERVICE)
+static void dump_ram_ctrl(const char *when)
+{
+	uint32_t control = 0, ret = 0, ret2 = 0, planned = 0;
+	enum tfm_platform_err_t err =
+		tfm_platform_ram_ctrl_dump(&control, &ret, &ret2, &planned);
+
+	if (err != TFM_PLATFORM_ERR_SUCCESS) {
+		printf("MEMCONF dump failed (err=%d)\n", (int)err);
+		return;
+	}
+
+	printf("MEMCONF %s: CONTROL=0x%08x RET=0x%08x RET2=0x%08x PLANNED=0x%08x\n",
+	       when, control, ret, ret2, planned);
+}
+#endif
+
 int main(void)
 {
 	int rc;
@@ -75,6 +97,22 @@ int main(void)
 		printf("Reset cause not supported.\n");
 		return 0;
 	}
+
+#if defined(CONFIG_NRF_TFM_RAM_CTRL_SERVICE)
+	/* Non-secure build: demonstrate System OFF RAM-retention *configuration*
+	 * through the secure RAM-control service. sys_poweroff() cannot be used on
+	 * NS upstream (no system-off service; it is noreturn and cannot actually
+	 * power off), so apply the devicetree retained regions directly via the
+	 * same routine z_sys_poweroff() would call, and dump MEMCONF to show the
+	 * planned retention. The region's data is not read from NS (the MPU does
+	 * not map it), so this is configure + observe only.
+	 */
+	dump_ram_ctrl("before");
+	(void)z_nrf_retained_mem_retention_apply();
+	dump_ram_ctrl("after (PLANNED = sections retained at System OFF)");
+	printf("Retention configured via the secure service; reset to re-run.\n");
+	return 0;
+#endif
 
 	if (IS_ENABLED(CONFIG_APP_USE_RETAINED_MEM)) {
 		bool retained_ok = retained_validate();

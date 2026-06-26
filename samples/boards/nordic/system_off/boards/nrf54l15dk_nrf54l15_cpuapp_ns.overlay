@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Non-secure variant. Carve a small zephyr,retained-ram region inside the
+ * non-secure SRAM so the retained_mem driver is instantiated; at power-off
+ * z_nrf_retained_mem_retention_apply() then configures its retention through
+ * the secure RAM-control service.
+ *
+ * Note: the region's *data* is not read from the non-secure app (the MPU does
+ * not map a region carved above sram0_ns). The sample only *configures*
+ * retention and dumps MEMCONF, so placement just needs to sit inside the
+ * non-secure RAM grant.
+ */
+/ {
+	sram_ret: memory@2003c000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x2003c000 DT_SIZE_K(4)>;
+		zephyr,memory-region = "RetainedMem";
+		status = "okay";
+
+		retainedmem0: retainedmem {
+			compatible = "zephyr,retained-ram";
+			status = "okay";
+		};
+	};
+
+	aliases {
+		retainedmemdevice = &retainedmem0;
+	};
+};
+
+&sram0_ns {
+	/* Shrink to make room for the retained region above it. */
+	reg = <0x20000 DT_SIZE_K(112)>;
+	ranges = <0x0 0x20000 DT_SIZE_K(112)>;
+};
