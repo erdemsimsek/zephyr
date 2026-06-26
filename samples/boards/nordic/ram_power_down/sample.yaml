@@ -1,0 +1,14 @@
+sample:
+  name: nRF RAM power-down
+  description: Power down unused non-secure RAM in System ON via the TF-M RAM-control service
+tests:
+  sample.boards.nordic.ram_power_down:
+    platform_allow:
+      - nrf54l15dk/nrf54l15/cpuapp/ns
+      - nrf7120dk/nrf7120/cpuapp/ns
+    tags: power
+    harness: console
+    harness_config:
+      type: one_line
+      regex:
+        - "MEMCONF CONTROL after: 0x[0-9a-f]+"
