@@ -5,3 +5,22 @@
  */
 
 #include <nrf7120dk_nrf7120_common.dtsi>
+
+/* Take the retained region from the top of the non-secure RAM, below the VTF region. */
+/ {
+	cpuapp_sram@200fc000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x200fc000 DT_SIZE_K(4)>;
+		zephyr,memory-region = "RetainedMem";
+		status = "okay";
+
+		retainedmem0: retainedmem {
+			compatible = "zephyr,retained-ram";
+			status = "okay";
+		};
+	};
+};
+
+&sram0_ns {
+	reg = <0x18000 DT_SIZE_K(912)>;
+};
