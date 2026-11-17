@@ -5,3 +5,8 @@
  */
 
 #include <nrf7120dk_nrf7120_common.dtsi>
+
+/* GRTC raises its non-secure interrupt in non-secure builds. */
+&grtc {
+	interrupts = <227 2>;
+};
